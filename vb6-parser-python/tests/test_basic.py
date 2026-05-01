@@ -1,7 +1,6 @@
 import pytest
 from vb6_parser._parser import Parser
 from vb6_parser._tree import Tree
-from vb6_parser._node import Node
 from vb6_parser._errors import ParseError
 
 HELLO_WORLD = b"Private Sub Command1_Click ()\n   Text1.Text = \"Hello, world!\"\nEnd Sub\n"
