@@ -1,5 +1,4 @@
 import pytest
-from pathlib import Path
 
 HELLO_WORLD = b"Private Sub Command1_Click ()\n   Text1.Text = \"Hello, world!\"\nEnd Sub\n"
 
