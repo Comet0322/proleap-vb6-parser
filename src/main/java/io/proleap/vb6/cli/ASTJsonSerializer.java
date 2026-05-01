@@ -7,11 +7,13 @@ import io.proleap.vb6.VisualBasic6Parser;
 import io.proleap.vb6.asg.metamodel.ASGElement;
 import io.proleap.vb6.asg.metamodel.Module;
 import io.proleap.vb6.asg.metamodel.Variable;
-import io.proleap.vb6.asg.metamodel.VisibilityElement;
 import io.proleap.vb6.asg.metamodel.NamedElement;
 import io.proleap.vb6.asg.metamodel.registry.ASGElementRegistry;
 import io.proleap.vb6.asg.metamodel.statement.function.Function;
 import io.proleap.vb6.asg.metamodel.statement.sub.Sub;
+import io.proleap.vb6.asg.metamodel.statement.property.get.PropertyGet;
+import io.proleap.vb6.asg.metamodel.statement.property.let.PropertyLet;
+import io.proleap.vb6.asg.metamodel.statement.property.set.PropertySet;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -137,6 +139,24 @@ public class ASTJsonSerializer {
             sem.put("kind", "sub");
             sem.put("name", s.getName());
             sem.put("visibility", s.getVisibility() != null ? s.getVisibility().name() : null);
+            sem.putNull("return_type");
+
+        } else if (element instanceof PropertyGet pg) {
+            sem.put("kind", "propertyGet");
+            sem.put("name", pg.getName());
+            sem.put("visibility", pg.getVisibility() != null ? pg.getVisibility().name() : null);
+            sem.putNull("return_type");
+
+        } else if (element instanceof PropertyLet pl) {
+            sem.put("kind", "propertyLet");
+            sem.put("name", pl.getName());
+            sem.put("visibility", pl.getVisibility() != null ? pl.getVisibility().name() : null);
+            sem.putNull("return_type");
+
+        } else if (element instanceof PropertySet ps) {
+            sem.put("kind", "propertySet");
+            sem.put("name", ps.getName());
+            sem.put("visibility", ps.getVisibility() != null ? ps.getVisibility().name() : null);
             sem.putNull("return_type");
 
         } else if (element instanceof Module m) {
