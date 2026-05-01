@@ -1,4 +1,3 @@
-import json
 from vb6_parser._node import Node
 
 SAMPLE_JSON = {
