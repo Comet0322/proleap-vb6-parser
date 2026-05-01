@@ -11,6 +11,10 @@ Thumbs.db
 *.war
 *.ear
 
+# Bundled JARs shipped with the Python package
+!vb6-parser-python/resources/vb6parser.jar
+!vb6-parser-python/vb6_parser/resources/vb6parser.jar
+
 .settings/
 .classpath
 .project
