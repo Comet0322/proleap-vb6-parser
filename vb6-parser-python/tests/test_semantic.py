@@ -1,4 +1,3 @@
-import pytest
 from vb6_parser import Parser
 
 HELLO_WORLD = b"Private Sub Command1_Click ()\n   Text1.Text = \"Hello, world!\"\nEnd Sub\n"
