@@ -1,6 +1,5 @@
 from vb6_parser._node import Node
 from vb6_parser._tree import Tree
-from vb6_parser._cursor import TreeCursor
 
 SAMPLE_JSON = {
     "type": "module",
