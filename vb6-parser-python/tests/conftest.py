@@ -1,4 +1,5 @@
 import pytest
+from vb6_parser import Parser
 
 HELLO_WORLD = b"Private Sub Command1_Click ()\n   Text1.Text = \"Hello, world!\"\nEnd Sub\n"
 
@@ -11,10 +12,12 @@ Private Sub Greet()
 End Sub
 """
 
-@pytest.fixture
-def hello_world_source():
-    return HELLO_WORLD
 
-@pytest.fixture
-def module_with_function_source():
-    return MODULE_WITH_FUNCTION
+@pytest.fixture(scope="module")
+def hello_world_tree():
+    return Parser().parse(HELLO_WORLD)
+
+
+@pytest.fixture(scope="module")
+def function_module_tree():
+    return Parser().parse(MODULE_WITH_FUNCTION)
