@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vb6-parser"
+version = "0.1.0"
+requires-python = ">=3.10"
+description = "tree-sitter-compatible API for VB6, backed by proleap-vb6-parser"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["vb6_parser*"]
+
+[tool.setuptools.package-data]
+vb6_parser = ["../resources/*.jar"]
