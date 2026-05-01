@@ -51,6 +51,7 @@ def test_parse_string_input():
     assert tree.root_node.type == "module"
 
 def test_parse_invalid_raises_parse_error():
+    # proleap may silently accept some invalid inputs; at minimum no crash without an exception
     with pytest.raises((ParseError, Exception)):
         Parser().parse("@@@@NOT_VALID_VB6@@@@")
 

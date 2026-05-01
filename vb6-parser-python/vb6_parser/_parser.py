@@ -16,7 +16,6 @@ from vb6_parser._tree import Tree
 _JAVA_FALLBACK_PATHS = [
     "/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home/bin/java",
     "/opt/homebrew/opt/openjdk/bin/java",
-    "/opt/homebrew/Cellar/openjdk/25.0.2/libexec/openjdk.jdk/Contents/Home/bin/java",
     "/usr/local/bin/java",
 ]
 
