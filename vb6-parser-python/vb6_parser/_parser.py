@@ -92,6 +92,8 @@ class Parser:
             raise VbRuntimeError(
                 f"java not found at {self._java!r}. Install Java 17+ and ensure it is on your PATH."
             )
+        except subprocess.TimeoutExpired:
+            raise VbRuntimeError(f"VB6 parse timed out after 30s for module '{module_name}'")
 
         if result.returncode != 0:
             stderr = result.stderr.decode("utf-8", errors="replace").strip()

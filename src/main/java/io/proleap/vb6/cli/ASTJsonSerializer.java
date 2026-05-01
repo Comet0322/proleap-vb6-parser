@@ -145,7 +145,7 @@ public class ASTJsonSerializer {
             sem.put("kind", "propertyGet");
             sem.put("name", pg.getName());
             sem.put("visibility", pg.getVisibility() != null ? pg.getVisibility().name() : null);
-            sem.putNull("return_type");
+            sem.put("return_type", pg.getType() != null ? pg.getType().getName() : null);
 
         } else if (element instanceof PropertyLet pl) {
             sem.put("kind", "propertyLet");
