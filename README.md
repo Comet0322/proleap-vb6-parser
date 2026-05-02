@@ -1,65 +1,261 @@
-ProLeap ANTLR4-based parser for Visual Basic 6.0
-================================================
+ProLeap VB6 Parser — Python + Java
+====================================
 
-This is a **Visual Basic 6.0 parser** based on an [ANTLR4 grammar](src/main/antlr4/io/proleap/vb6/VisualBasic6.g4), 
-which generates an **Abstract Syntax Tree** (AST) and **Abstract Semantic Graph** (ASG) for Visual Basic 6.0 code.
-The AST represents plain Visual Basic 6.0 source code in a syntax tree structure.
-The ASG is generated from the AST by **semantic analysis** and provides data and control
-flow information (e. g. variable access).
+A **Visual Basic 6.0 parser** with a tree-sitter-compatible Python API, backed by the [ProLeap ANTLR4 VB6 grammar](src/main/antlr4/io/proleap/vb6/VisualBasic6.g4).
 
-The parser is developed test-driven and has successfully been **applied to large Visual Basic 6.0 projects**. It is used by the [ProLeap analyzer & transformer for Visual Basic 6.0](https://github.com/proleap/proleap-vb6).
-
-💫 **Star** if you like our work.
+The Java core produces a concrete syntax tree (CST) enriched with semantic information (procedure signatures, call relationships, variable types). The Python wrapper exposes a tree-sitter-style interface so analysis code doesn't need to know about the underlying Java implementation.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![ProLeap on Twitter](https://img.shields.io/twitter/follow/proleap_io.svg?style=social&label=Follow)](https://twitter.com/proleap_io)
 
 
-Example
--------
+Python Quick Start
+------------------
 
-### Input: VB6 code
+**Requirements:** Python >= 3.10, Java 17+ on PATH (or `JAVA_HOME` set).
 
+### Install
+
+```bash
+pip install --no-build-isolation ./vb6-parser-python/
 ```
-Private Sub Command1_Click ()
-   Text1.Text = "Hello, world!"
+
+### Parse VB6 code
+
+```python
+from vb6_parser import Parser
+
+tree = Parser().parse("""
+Private Sub Command1_Click()
+    Text1.Text = "Hello, world!"
 End Sub
+""")
+
+root = tree.root_node
+print(root.type)        # module
+print(root.semantic)    # {'kind': 'module', 'name': 'Module', ...}
+```
+
+### Parse a file
+
+```python
+tree = Parser().parse_file("MyForm.bas")
 ```
 
 
-### Output: Abstract Syntax Tree (AST)
+Python API Reference
+--------------------
 
-```
-(startRule
-  (module
-    (moduleBody
-      (moduleBodyElement
-        (subStmt
-          (visibility Private) Sub
-          (ambiguousIdentifier Command1_Click)
-          (argList ( ))
-          (block
-            (blockStmt
-              (letStmt
-                (implicitCallStmt_InStmt
-                  (iCS_S_MembersCall
-                    (iCS_S_VariableOrProcedureCall
-                      (ambiguousIdentifier Text1))
-                    (iCS_S_MemberCall .
-                      (iCS_S_VariableOrProcedureCall
-                        (ambiguousIdentifier
-                          (ambiguousKeyword Text)))))) =
-                (valueStmt
-                  (literal "Hello, world!"))))) End Sub)))) <EOF>)
+### Parser
+
+```python
+from vb6_parser import Parser
+
+parser = Parser()                          # auto-locate bundled jar
+parser = Parser(jar_path="/path/to.jar")  # explicit jar
 ```
 
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `parse(code, module_name="Module")` | `Tree` | Parse str or bytes |
+| `parse_file(path)` | `Tree` | Parse a .bas / .cls file |
 
-Getting started
----------------
+### Tree
 
-To include the parser in your Maven project build it and add the dependency:
+| Property | Type | Description |
+|----------|------|-------------|
+| `root_node` | `Node` | Root of the CST |
+| `source` | `bytes` | Original source bytes |
+
+### Node
+
+Mirrors the [tree-sitter Node API](https://tree-sitter.github.io/tree-sitter/using-parsers#syntax-nodes).
+
+| Property / Method | Description |
+|-------------------|-------------|
+| `type` | Rule name, e.g. `"subStmt"`, `"module"` |
+| `is_named` | `True` for rule nodes, `False` for terminals |
+| `start_point` | `(row, col)` 0-indexed |
+| `end_point` | `(row, col)` 0-indexed |
+| `start_byte` / `end_byte` | Byte offsets into source |
+| `text` | `bytes` slice of source |
+| `children` | `list[Node]` all children |
+| `named_children` | `list[Node]` named children only |
+| `child_count` / `named_child_count` | `int` |
+| `parent` | `Node or None` |
+| `semantic` | `dict or None` enriched metadata (see below) |
+| `child_by_field_name(name)` | `Node or None` |
+| `children_by_field_name(name)` | `list[Node]` |
+| `descendants_of_type(*types)` | `list[Node]` recursive search |
+| `walk()` | `TreeCursor` |
+
+### TreeCursor
+
+```python
+cursor = tree.root_node.walk()
+cursor.goto_first_child()   # -> bool
+cursor.goto_next_sibling()  # -> bool
+cursor.goto_parent()        # -> bool
+cursor.reset(node)          # reposition to any Node
+cursor.node                 # current Node
+cursor.current_field_name   # str | None
+```
+
+### Semantic dict
+
+For procedure and variable nodes the `semantic` property returns a dict:
+
+```python
+# subStmt / functionStmt / propertyGetStmt / propertyLetStmt / propertySetStmt
+{
+    "kind":        "sub" | "function" | "propertyGet" | "propertyLet" | "propertySet",
+    "name":        "MyProc",
+    "visibility":  "PUBLIC" | "PRIVATE" | None,
+    "return_type": "Integer" | None,          # None for subs
+    "params": [
+        {"name": "x", "type": "Double", "is_optional": False},
+        ...
+    ],
+    "callers": [
+        {"name": "CallingProc", "line": 14},  # 0-indexed line number
+        ...
+    ]
+}
+
+# variableSubStmt
+{"kind": "variable", "name": "total", "visibility": "PRIVATE", "return_type": "Double"}
+
+# module root
+{"kind": "module", "name": "Calculator", "visibility": None, "return_type": None}
+```
+
+`callers` lists every call-site that invokes this procedure. To derive **callees** (what a procedure calls), invert the relationship in Python:
+
+```python
+procs = root.descendants_of_type("subStmt", "functionStmt")
+callees_of_main = {
+    p.semantic["name"]
+    for p in procs
+    if any(c["name"] == "Main" for c in p.semantic["callers"])
+}
+```
+
+
+Usage Examples
+--------------
+
+### List all procedures with signatures
+
+```python
+from vb6_parser import Parser
+
+tree = Parser().parse_file("Module1.bas")
+procs = tree.root_node.descendants_of_type(
+    "subStmt", "functionStmt",
+    "propertyGetStmt", "propertyLetStmt", "propertySetStmt"
+)
+
+for p in procs:
+    s = p.semantic
+    params = ", ".join(
+        f"{a['name']}: {a['type'] or '?'}" for a in s["params"]
+    )
+    ret = s["return_type"] or "void"
+    print(f"[{s['visibility']}] {s['kind']} {s['name']}({params}) -> {ret}")
+```
+
+Output:
+```
+[PUBLIC] function Add(x: Double, y: Double) -> Double
+[PRIVATE] sub PrintResult(val: Double) -> void
+[PUBLIC] sub Main() -> void
+```
+
+### Build a call graph
+
+```python
+procs = tree.root_node.descendants_of_type("subStmt", "functionStmt")
+
+for p in procs:
+    name = p.semantic["name"]
+    callees = [
+        q.semantic["name"] for q in procs
+        if any(c["name"] == name for c in q.semantic["callers"])
+    ]
+    print(f"{name} -> {callees}")
+```
+
+### Cursor-based DFS traversal
+
+```python
+cursor = tree.root_node.walk()
+while True:
+    print(cursor.node.type, cursor.node.start_point)
+    if cursor.goto_first_child():
+        continue
+    if cursor.goto_next_sibling():
+        continue
+    while cursor.goto_parent():
+        if cursor.goto_next_sibling():
+            break
+    else:
+        break
+```
+
+### Find variable declarations
+
+```python
+variables = tree.root_node.descendants_of_type("variableSubStmt")
+for v in variables:
+    if v.semantic:
+        print(f"{v.semantic['name']} : {v.semantic['return_type']}")
+```
+
+
+Error Handling
+--------------
+
+```python
+from vb6_parser import Parser, ParseError, VbRuntimeError
+
+try:
+    tree = Parser().parse(code)
+except ParseError as e:
+    print("VB6 parse failed:", e)
+    print("Java stderr:", e.stderr)
+except VbRuntimeError as e:
+    print("Java not found or timed out:", e)
+```
+
+
+Architecture
+------------
 
 ```
+Python caller
+    |
+    v
+vb6_parser.Parser.parse()          # Python subprocess bridge
+    |  writes tempfile, spawns:
+    v
+java -jar vb6parser.jar            # ASTJsonSerializer + VbParserCLI
+    |  stdout = JSON tree
+    v
+vb6_parser.Tree / Node             # tree-sitter-compatible Python objects
+```
+
+The Java layer uses proleap's ANTLR4 runner to build an ASG, then `ASTJsonSerializer` walks the parse tree and emits one JSON object per node with 9 fields: `type`, `is_named`, `start_point`, `end_point`, `start_byte`, `end_byte`, `field_name`, `semantic`, `children`.
+
+The Python layer wraps that JSON in `Node` objects with `__slots__` for efficiency. No native extensions required — just subprocess + JSON.
+
+
+Java API (advanced)
+-------------------
+
+The Java core can be used directly as a Maven dependency for JVM projects.
+
+### Add dependency
+
+```xml
 <dependency>
   <groupId>io.github.uwol</groupId>
   <artifactId>proleap-vb6-parser</artifactId>
@@ -67,132 +263,68 @@ To include the parser in your Maven project build it and add the dependency:
 </dependency>
 ```
 
-Use the following code as a starting point for developing own code.
-
-### Simple: Generate an Abstract Semantic Graph (ASG) from VB6 code
+### Generate ASG and traverse AST
 
 ```java
-// generate ASG from plain VB6 code
-java.io.File inputFile = new java.io.File("src/test/resources/io/proleap/vb6/asg/HelloWorld.cls");
-io.proleap.vb6.asg.metamodel.Program program = new io.proleap.vb6.asg.runner.impl.VbParserRunnerImpl().analyzeFile(inputFile);
+java.io.File inputFile = new java.io.File("HelloWorld.cls");
+io.proleap.vb6.asg.metamodel.Program program =
+    new io.proleap.vb6.asg.runner.impl.VbParserRunnerImpl().analyzeFile(inputFile);
 
-// navigate on ASG
+// navigate ASG
 io.proleap.vb6.asg.metamodel.Module module = program.getClazzModule("HelloWorld");
-io.proleap.vb6.asg.metamodel.Variable variableI = module.getVariable("I");
-io.proleap.vb6.asg.metamodel.type.Type typeOfI = variableI.getType();
-```
+io.proleap.vb6.asg.metamodel.Variable var = module.getVariable("I");
+io.proleap.vb6.asg.metamodel.type.Type type = var.getType();
 
-### Complex: Generate an Abstract Semantic Graph (ASG) and traverse the Abstract Syntax Tree (AST)
-
-```java
-// generate ASG from plain VB6 code
-java.io.File inputFile = new java.io.File("src/test/resources/io/proleap/vb6/asg/HelloWorld.cls");
-io.proleap.vb6.asg.metamodel.Program program = new io.proleap.vb6.asg.runner.impl.VbParserRunnerImpl().analyzeFile(inputFile);
-
-// traverse the AST
-io.proleap.vb6.VisualBasic6BaseVisitor<Boolean> visitor = new io.proleap.vb6.VisualBasic6BaseVisitor<Boolean>() {
-  @Override
-  public Boolean visitVariableSubStmt(final io.proleap.vb6.VisualBasic6Parser.VariableSubStmtContext ctx) {
-    io.proleap.vb6.asg.metamodel.Variable variable = (io.proleap.vb6.asg.metamodel.Variable) program.getASGElementRegistry().getASGElement(ctx);
-    String name = variable.getName();
-    io.proleap.vb6.asg.metamodel.type.Type type = variable.getType();
-
-    return visitChildren(ctx);
-  }
-};
-
-for (final io.proleap.vb6.asg.metamodel.Module module : program.getModules()) {
-  visitor.visit(module.getCtx());
+// traverse AST with visitor
+io.proleap.vb6.VisualBasic6BaseVisitor<Boolean> visitor =
+    new io.proleap.vb6.VisualBasic6BaseVisitor<Boolean>() {
+        @Override
+        public Boolean visitVariableSubStmt(
+                io.proleap.vb6.VisualBasic6Parser.VariableSubStmtContext ctx) {
+            io.proleap.vb6.asg.metamodel.Variable v =
+                (io.proleap.vb6.asg.metamodel.Variable)
+                program.getASGElementRegistry().getASGElement(ctx);
+            return visitChildren(ctx);
+        }
+    };
+for (io.proleap.vb6.asg.metamodel.Module m : program.getModules()) {
+    visitor.visit(m.getCtx());
 }
 ```
 
+### Build the fat JAR (CLI / Python bridge)
 
-Where to look next
-------------------
-
-- [ANTLR4 Visual Basic 6.0 grammar](src/main/antlr4/io/proleap/vb6/VisualBasic6.g4)
-- [Unit test code examples](src/test/java/io/proleap/vb6/asg/statement)
-- [ProLeap analyzer & transformer for Visual Basic 6.0](https://github.com/proleap/proleap-vb6)
-
-
-How to cite
------------
-
-Please cite ProLeap Visual Basic 6.0 parser in your publications, if it helps your research. Here is an example BibTeX entry:
-
-```
-@misc{wolffgang2018vb6,
-  title={ProLeap Visual Basic 6.0 parser},
-  author={Wolffgang, Ulrich and others},
-  year={2018},
-  howpublished={\url{https://github.com/uwol/proleap-vb6-parser}},
-}
+```bash
+mvn package -DskipTests
+# produces target/vb6parser.jar — copy to vb6-parser-python/vb6_parser/resources/
 ```
 
 
-Features
---------
-
-* The grammar is line-based and takes into account whitespace, so that member calls (e.g. `A.B`) are distinguished from contextual object calls in WITH statements (e.g. `A .B`).
-* Keywords can be used as identifiers depending on the context, enabling e.g. `A.Type`, but not `Type.B`.
-* The ANTLR4 grammar is derived from the [Visual Basic 6.0 language reference](http://msdn.microsoft.com/en-us/library/aa338033%28v=vs.60%29.aspx) and tested against MSDN VB6 statement examples as well as several Visual Basic 6.0 code repositories.
-* Rigorous test-driven development.
-
-
-Build process
+Grammar Notes
 -------------
 
-The build process is based on Maven (version 3 or higher). Building requires a JDK 17 and generates a Maven JAR, which can be used in other Maven projects as a dependency.
+* Line-based grammar distinguishes member calls (`A.B`) from WITH-context calls (`.B`).
+* Keywords may be used as identifiers depending on context (`A.Type` valid; `Type.B` not).
+* Derived from the [VB6 language reference](http://msdn.microsoft.com/en-us/library/aa338033%28v=vs.60%29.aspx), tested against MSDN statement examples.
 
-* Clone or download the repository.
-* In [Eclipse](https://eclipse.org) import the directory as a an `existing Maven project`.
-* To build, run:
 
-```
-$ mvn clean package
-```
+Build & Test
+------------
 
-* The test suite executes AST and ASG tests against VB6 test code and MSDN statement examples. Unit tests and parse tree files were generated by class `io.proleap.vb6.TestGenerator` from those VB6 test files.
-* You should see output like this:
+**Java (requires JDK 17+, Maven 3+):**
 
-```
-[INFO] Scanning for projects...
-...
--------------------------------------------------------
- T E S T S
--------------------------------------------------------
-Running io.proleap.vb6.ast.calls.CallsTest
-Parsing file Calls.cls.
-Comparing parse tree with file Calls.cls.tree.
-Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 6.991 sec
-Running io.proleap.vb6.ast.calls.Module1Test
-...
-Results :
-
-Tests run: 215, Failures: 0, Errors: 0, Skipped: 0
-
-[INFO] ------------------------------------------------------------------------
-[INFO] BUILD SUCCESS
-[INFO] ------------------------------------------------------------------------
+```bash
+mvn clean package     # build + test
+mvn test              # test only
 ```
 
-* To install the JAR in your local Maven repository:
+**Python (requires Python >= 3.10):**
 
+```bash
+cd vb6-parser-python
+pip install --no-build-isolation .
+pytest tests/
 ```
-$ mvn clean install
-```
-
-* To only run the tests:
-
-```
-$ mvn clean test
-```
-
-
-Release process
----------------
-
-* Milestones of the grammar are published in the [ANTLR grammars repo](https://github.com/antlr/grammars-v4).
 
 
 License
