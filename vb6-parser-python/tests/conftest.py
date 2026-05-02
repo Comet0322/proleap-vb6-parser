@@ -12,6 +12,22 @@ Private Sub Greet()
 End Sub
 """
 
+# Module where Main calls Add and PrintResult — exercises params + callers
+CALL_GRAPH_MODULE = b"""Public Function Add(x As Double, y As Double) As Double
+    Add = x + y
+End Function
+
+Private Sub PrintResult(val As Double)
+    Debug.Print val
+End Sub
+
+Public Sub Main()
+    Dim r As Double
+    r = Add(1.0, 2.0)
+    PrintResult r
+End Sub
+"""
+
 
 @pytest.fixture(scope="module")
 def hello_world_tree():
@@ -21,3 +37,8 @@ def hello_world_tree():
 @pytest.fixture(scope="module")
 def function_module_tree():
     return Parser().parse(MODULE_WITH_FUNCTION)
+
+
+@pytest.fixture(scope="module")
+def call_graph_tree():
+    return Parser().parse(CALL_GRAPH_MODULE, module_name="CallGraph")
