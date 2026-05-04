@@ -34,7 +34,7 @@ public class CallDelegateImpl extends ScopedElementImpl implements Call {
 			result = true;
 		} else if (obj instanceof Call) {
 			final Call otherCall = (Call) obj;
-			result = delegate.getName().toLowerCase().equals(otherCall.getName().toLowerCase());
+			result = delegate.getName() != null && delegate.getName().equalsIgnoreCase(otherCall.getName());
 		} else {
 			result = false;
 		}

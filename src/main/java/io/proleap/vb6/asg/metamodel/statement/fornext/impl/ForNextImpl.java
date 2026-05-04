@@ -77,7 +77,7 @@ public class ForNextImpl extends ScopeImpl implements ForNext {
 			} else {
 				final VariableCall variableCall = (VariableCall) unwrappedCall;
 				final Variable variable = variableCall.getVariable();
-				final boolean sameName = variable.getName().toLowerCase().equals(name.toLowerCase());
+				final boolean sameName = name.equalsIgnoreCase(variable.getName());
 
 				if (!sameName) {
 					result = super.getScopedElementsInScope(name);

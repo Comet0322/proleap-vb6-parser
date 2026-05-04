@@ -8,6 +8,8 @@
 
 package io.proleap.vb6.asg.metamodel.type;
 
+import java.util.Objects;
+
 public enum VbBaseType implements BaseType {
 
 	BOOLEAN("Boolean", false), BYTE("Byte", false), COLLECTION("Collection", true), COLOR("Color", false), CURRENCY(
@@ -17,7 +19,7 @@ public enum VbBaseType implements BaseType {
 
 	public static VbBaseType forString(final String name) {
 		for (final VbBaseType vbType : values()) {
-			if (vbType.getName().equals(name)) {
+			if (Objects.equals(vbType.getName(), name)) {
 				return vbType;
 			}
 		}

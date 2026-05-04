@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 
@@ -202,7 +203,7 @@ public abstract class ProcedureImpl extends ScopeImpl implements Procedure {
 
 	@Override
 	public boolean isLastArg(final String argName) {
-		return !argsList.isEmpty() && !argsList.get(argsList.size() - 1).getName().equals(argName);
+		return !argsList.isEmpty() && !Objects.equals(argsList.get(argsList.size() - 1).getName(), argName);
 	}
 
 	@Override

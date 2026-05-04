@@ -62,7 +62,7 @@ public class ForEachImpl extends ScopeImpl implements ForEach {
 		} else if (elementVariable == null) {
 			result = super.getScopedElementsInScope(name);
 		} else {
-			final boolean sameName = elementVariable.getName().toLowerCase().equals(name.toLowerCase());
+			final boolean sameName = name.equalsIgnoreCase(elementVariable.getName());
 
 			if (!sameName) {
 				result = super.getScopedElementsInScope(name);

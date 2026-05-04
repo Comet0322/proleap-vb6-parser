@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.slf4j.Logger;
@@ -481,11 +482,11 @@ public abstract class ScopeImpl extends ScopedElementImpl implements Scope {
 				 */
 				final Function scopeFunction = this.findScope(Function.class);
 				final boolean hasScopeFunctionName = scopeFunction == null ? false
-						: scopeFunction.getName().equals(name);
+						: Objects.equals(scopeFunction.getName(), name);
 
 				final PropertyGet scopePropertyGet = this.findScope(PropertyGet.class);
 				final boolean hasScopePropertyGetName = scopePropertyGet == null ? false
-						: scopePropertyGet.getName().equals(name);
+						: Objects.equals(scopePropertyGet.getName(), name);
 
 				final boolean isLeftHandSideCall = CallContext.LET_LEFT_HAND_SIDE.equals(callContext);
 
