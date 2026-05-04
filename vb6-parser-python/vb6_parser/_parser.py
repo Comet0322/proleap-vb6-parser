@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -32,10 +33,12 @@ def _find_java() -> str:
     # 2. Try PATH java (may be a stub on macOS; verify it actually works)
     path_java = shutil.which("java")
     if path_java:
+        path_java = os.path.abspath(path_java)
         try:
             probe = subprocess.run(
                 [path_java, "-version"],
                 capture_output=True,
+                stdin=subprocess.DEVNULL,
                 timeout=10,
             )
             if probe.returncode == 0 or b"version" in probe.stderr:
@@ -79,13 +82,22 @@ class Parser:
         source = p.read_bytes()
         return self._run(str(p), source, p.stem)
 
+    @staticmethod
+    def _validate_module_name(name: str) -> None:
+        if not re.fullmatch(r"[A-Za-z0-9_\-]{1,255}", name):
+            raise ValueError(
+                f"module_name {name!r} must be 1-255 chars, alphanumeric/underscore/hyphen only"
+            )
+
     def _run(self, file_path: str, source: bytes, module_name: str) -> Tree:
+        self._validate_module_name(module_name)
         try:
             result = subprocess.run(
                 [self._java, "-jar", str(self._jar),
                  "--file", file_path,
                  "--module-name", module_name],
                 capture_output=True,
+                stdin=subprocess.DEVNULL,
                 timeout=30,
             )
         except FileNotFoundError:
